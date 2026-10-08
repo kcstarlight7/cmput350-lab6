@@ -141,13 +141,12 @@ void MandelbrotViewer::updateViewState(const InputSummary& inputs, sf::Time delt
 void MandelbrotViewer::handleZoom(double scrollDistance, sf::Vector2i mousePosition) {
     double worldViewFactor = std::pow(ZOOM_EXPONENT_BASE, scrollDistance);
 
-    // TODO: expand our world view bounds (mMinPointWorld, mMaxPointWorld)
+    // expand our world view bounds (mMinPointWorld, mMaxPointWorld)
     // by worldViewFactor around the current world point being pointed to by the user's cursor.
     // In particular, the new world-coordinates rectangle will be of size
     // (worldViewFactor * (orig world width), worldViewFactor * (orig world height)),
     // and the user's cursor will point to exactly the same thing before and after the zoom.
 
-    double worldViewFactor = std::pow(ZOOM_EXPONENT_BASE, scrollDistance);
     sf::Vector2<double> mouseWorld = windowPosToWorld(sf::Vector2<double>(
         static_cast<double>(mousePosition.x), static_cast<double>(mousePosition.y)));
     double oldWidth = mMaxPointWorld.x - mMinPointWorld.x;
