@@ -186,6 +186,7 @@ void MandelbrotViewer::handleWindowResize(sf::Vector2u newSize)  // newSize is i
     // TODO: update mViewBufferGPU so that it has enough memory for all the pixels in the new window
     // size
     //      Hint: (void)mViewBufferGPU.resize ... something ... this is a trivial one-liner.
+    mViewBufferGPU.resize(newSize, false);
     // The sprite will have an incorrect view into the texture after resize, so we update:
     mViewSprite.setTextureRect(sf::IntRect({0, 0}, sf::Vector2i(newSize)));
     mWindowSize = newSize;  // update mWindowSize.
