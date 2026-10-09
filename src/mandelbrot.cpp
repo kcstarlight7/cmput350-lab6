@@ -261,7 +261,7 @@ double MandelbrotViewer::mandelbrotSmooth(double cX, double cY, int maxIters) co
         double zPrimeX = (zX * zX) - (zY * zY) + cX;
         double zPrimeY = 2.0 * zX * zY + cY;
 
-        if (((zPrimeX * zPrimeX) + (zPrimeY * zPrimeY)) >= 4.0) {
+        if (((zPrimeX * zPrimeX) + (zPrimeY * zPrimeY)) >= 16.0) {
             zX = zPrimeX;
             zY = zPrimeY;
             double fracIterCount = (n + 1) - ((std::log(std::log(std::sqrt((zX*zX) + (zY*zY))))) / LOG_2);
