@@ -1,1 +1,6 @@
 Answer written questions here:
+1. Starting from a low number allows the program to respond faster to any user interaction, as higher number would take a long time to compute within mandelbrot/mandelbrotSmooth. 
+
+2. Efficiency could be increased by having dedicated computer(s) to calculate the Mandelbrot escape time, while it returns the result to a main computer to render what is necessary. 
+
+3. The performance would be better, as this lessens the amount of calls to mandelbrot/mandelbrotSmooth.

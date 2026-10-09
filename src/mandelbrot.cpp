@@ -173,7 +173,7 @@ void MandelbrotViewer::handleWindowResize(sf::Vector2u newSize)  // newSize is i
     mWindow.setView(sf::View(
         sf::FloatRect({0, 0}, {static_cast<float>(newSize.x), static_cast<float>(newSize.y)})));
 
-    // TODO: handle window resizes. In particular, update mMinPointWorld and mMaxPointWorld
+    // handle window resizes. In particular, update mMinPointWorld and mMaxPointWorld
     //       such that the world view is the same aspect ratio as the new window size (such that
     //       the world view is not distorted), and centered around the same world point they used to
     //       be. The rectangle's size in each dimension is scaled by the same factor as the window
@@ -181,11 +181,25 @@ void MandelbrotViewer::handleWindowResize(sf::Vector2u newSize)  // newSize is i
     //       cropped/extended, not zoomed.
     // ... your code here...
 
+    // ratio of resize
+    double xRatio = static_cast<double>(newSize.x) / mWindowSize.x;
+    double yRatio = static_cast<double>(newSize.y) / mWindowSize.y;
+
+    // world coords of center
+    sf::Vector2<double> centerCoords((mMaxPointWorld.x + mMinPointWorld.x) / 2, (mMaxPointWorld.y + mMinPointWorld.y) / 2);
+
+    double newWidth = (mMaxPointWorld.x - mMinPointWorld.x) * xRatio;
+    double newHeight = (mMaxPointWorld.y - mMinPointWorld.y) * yRatio;
+
+    mMinPointWorld.x = centerCoords.x - (newWidth / 2);
+    mMinPointWorld.y = centerCoords.y - (newHeight / 2);
+    mMaxPointWorld.x = centerCoords.x + (newWidth / 2);
+    mMaxPointWorld.y = centerCoords.y + (newHeight / 2);
+
     // update CPU-side image buffer size to have enough memory for all the pixels:
     mViewBuffer.resize(newSize);
-    // TODO: update mViewBufferGPU so that it has enough memory for all the pixels in the new window
+    // update mViewBufferGPU so that it has enough memory for all the pixels in the new window
     // size
-    //      Hint: (void)mViewBufferGPU.resize ... something ... this is a trivial one-liner.
     mViewBufferGPU.resize(newSize, false);
     // The sprite will have an incorrect view into the texture after resize, so we update:
     mViewSprite.setTextureRect(sf::IntRect({0, 0}, sf::Vector2i(newSize)));
@@ -222,26 +236,42 @@ double MandelbrotViewer::mandelbrot(double cX, double cY, int maxIters) const {
     double zY = 0.0;
     for (int n = 1; n <= maxIters; n++) {
         double zPrimeX = (zX * zX) - (zY * zY) + cX;
-        double zPrimeY = (2.0 * zX * zY) + cY;
+        double zPrimeY = 2.0 * zX * zY + cY;
+
+        if (((zPrimeX * zPrimeX) + (zPrimeY * zPrimeY)) >= 4.0) {
+            return static_cast<double>(n);
+        }
 
         zX = zPrimeX;
         zY = zPrimeY;
-
-        if (((zX * zX) + (zY * zY)) > 4.0) {
-            return static_cast<double>(n);
-        }
     }
 
     return std::numeric_limits<double>::infinity(); 
 }
 
 double MandelbrotViewer::mandelbrotSmooth(double cX, double cY, int maxIters) const {
-    // TODO: return the smoothed number of iterations it takes for z to escape a radius of greater
+    // return the smoothed number of iterations it takes for z to escape a radius of greater
     //       than 2, if it happens within maxIters iterations, otherwise return infinity.
     //       If you use an escape radius of exactly 2, you will see some artifacts. Use a
     //       higher radius (this is still correct, since divergence -> infty), but with more
     //       computational cost (since you need to simulate more steps).
-    return std::numeric_limits<double>::infinity();  // get rid of this and add your code here...
+    double zX = 0.0;
+    double zY = 0.0;
+    for (int n = 1; n <= maxIters; n++) {
+        double zPrimeX = (zX * zX) - (zY * zY) + cX;
+        double zPrimeY = 2.0 * zX * zY + cY;
+
+        if (((zPrimeX * zPrimeX) + (zPrimeY * zPrimeY)) >= 4.0) {
+            zX = zPrimeX;
+            zY = zPrimeY;
+            double fracIterCount = (n + 1) - ((std::log(std::log(std::sqrt((zX*zX) + (zY*zY))))) / LOG_2);
+            return fracIterCount;
+        }
+
+        
+    }
+
+    return std::numeric_limits<double>::infinity();  
 }
 
 // windowPosToWorld takes a point in window coordinates and converts it to world coordinates
@@ -260,13 +290,28 @@ sf::Vector2<double> MandelbrotViewer::windowPosToWorld(const sf::Vector2<double>
 // drawIntoBuffer renders the current world view (bounded by mMinPointWorld and mMaxPointWorld)
 // into mViewBuffer
 void MandelbrotViewer::drawIntoViewBuffer(int maxIters) {
-    // TODO: render into mViewBuffer using sf::Image's setPixel method, which has signature
+    // render into mViewBuffer using sf::Image's setPixel method, which has signature
     //          void sf::Image::setPixel(sf::Vector2u coords, sf::Color color)
     //       At each pixel, find the world coordinates corresponding to the **CENTER** of the pixel.
     //       Then, find the (possibly continuous) number of iterations it takes for z to escape
     //       the escape radius (using mandelbrotSmooth() or mandelbrot()). If it never escapes,
     //       color the pixel black, otherwise, pass the escape iteration number to
     //       CyclicGradient::DEFAULT_GRADIENT(n) to get a colour to set the pixel to.
+    sf::Vector2<double> worldSize = mMaxPointWorld - mMinPointWorld;
+    double worldPixelX = worldSize.x / mWindowSize.x;
+    double worldPixelY = worldSize.y / mWindowSize.y;
+
+    for (int i = 0; i < mWindowSize.x; i++) {
+        for (int j = 0; j < mWindowSize.y; j++) {
+            double mandlebrotRes = mandelbrot(mMinPointWorld.x + (i * worldPixelX) + (worldPixelX / 2),
+                           mMinPointWorld.y + (j * worldPixelY) + (worldPixelY / 2), maxIters);
+            if (mandlebrotRes == std::numeric_limits<double>::infinity()) {
+                mViewBuffer.setPixel(sf::Vector2u(static_cast<unsigned int>(i), static_cast<unsigned int>(j)), sf::Color::Black);
+            } else {
+                mViewBuffer.setPixel(sf::Vector2u(static_cast<unsigned int>(i), static_cast<unsigned int>(j)), CyclicGradient::DEFAULT_GRADIENT(mandlebrotRes));
+            }
+        }
+    }
 }
 
 // copyViewBufferToGPU takes the drawn CPU-side buffer mViewBuffer and copies it to the
